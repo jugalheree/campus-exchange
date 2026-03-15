@@ -45,9 +45,15 @@ export default function ProductCard({ product }) {
           </span>
         </div>
 
-        {/* Category */}
-        <div className="absolute top-3 right-3">
-          <span className="tag text-xs">{product.category}</span>
+        {/* Badges */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
+          {product.listingType === "free" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/90 text-white">FREE</span>
+          )}
+          {product.listingType === "rent" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/90 text-white">RENT</span>
+          )}
+          <span className="tag text-[10px]">{product.category}</span>
         </div>
       </div>
 

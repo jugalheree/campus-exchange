@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { MARKETPLACE_CATEGORIES, CONDITIONS } from "../config/categories";
 import ProductCard from "../components/ProductCard";
 import { authStore } from "../store/authStore";
 import { useNavigate, Link } from "react-router-dom";
 import SearchSuggestions from "../components/SearchSuggestions";
 
-const CATEGORIES = ["Notes", "Books", "Calculators", "Electronics", "Lab Equipment", "Other"];
-const CAT_ICONS = { Notes: "📝", Books: "📚", Calculators: "🧮", Electronics: "💻", "Lab Equipment": "🔬", Other: "📦" };
-const CONDITIONS = [{ value: "new", label: "New" }, { value: "like_new", label: "Like New" }, { value: "good", label: "Good" }, { value: "fair", label: "Fair" }];
+// removed CAT_ICONS = { Notes: "📝", Books: "📚", Calculators: "🧮", Electronics: "💻", "Lab Equipment": "🔬", Other: "📦" };
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -121,10 +120,10 @@ export default function Products() {
               className={`px-4 py-2 rounded-xl text-sm transition-all ${!filters.category ? "bg-white text-black font-medium" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"}`}>
               All
             </button>
-            {CATEGORIES.map((cat) => (
-              <button key={cat} onClick={() => { setFilter("category", cat); setPage(1); }}
-                className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-1.5 ${filters.category === cat ? "bg-white text-black font-medium" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"}`}>
-                {CAT_ICONS[cat]} {cat}
+            {MARKETPLACE_CATEGORIES.map((cat) => (
+              <button key={cat.label} onClick={() => { setFilter("category", cat.value); setPage(1); }}
+                className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-1.5 ${filters.category === cat.value ? "bg-white text-black font-medium" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"}`}>
+                {cat.icon} {cat.label}
               </button>
             ))}
           </div>

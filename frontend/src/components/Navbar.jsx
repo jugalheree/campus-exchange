@@ -177,6 +177,7 @@ export default function Navbar() {
               <SideItem to="/messages" icon={<IconMsg />} active={isActive("/messages")} badge={unread}>Messages</SideItem>
               <SideItem to="/offers" icon={<IconOffer />} active={isActive("/offers")} badge={pendingOffers}>Offers</SideItem>
               <SideItem to="/feed" icon={<IconFeed />} active={isActive("/feed")}>Campus Feed</SideItem>
+              <SideItem to="/lost-found" icon={<IconSearch />} active={isActive("/lost-found")}>Lost & Found</SideItem>
 
               <div className="pt-3 pb-1 px-2">
                 <p className="text-[10px] text-gray-600 uppercase tracking-widest font-medium">You</p>
@@ -275,3 +276,4 @@ const IconHeart  = () => <I d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-
 const IconTrophy = () => <I d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />;
 const IconPlus   = () => <I d="M12 4v16m8-8H4" strokeWidth={2.5} />;
 const IconUpload = () => <I d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />;
+const IconSearch = () => <I d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />;

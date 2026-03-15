@@ -22,6 +22,7 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
 import priceHistoryRoutes from "./routes/priceHistoryRoutes.js";
 import feedRoutes from "./routes/feedRoutes.js";
+import lostFoundRoutes from "./routes/lostFoundRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
@@ -58,6 +59,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/price-history", priceHistoryRoutes);
 app.use("/api/feed", feedRoutes);
+app.use("/api/lost-found", lostFoundRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 /* ===============================

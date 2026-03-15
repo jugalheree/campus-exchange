@@ -26,6 +26,9 @@ import Report from "./pages/Report";
 import SellerProfile from "./pages/SellerProfile";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Feed from "./pages/Feed";
+import LostFound from "./pages/LostFound";
+import CreateLostFound from "./pages/CreateLostFound";
+import LostFoundDetail from "./pages/LostFoundDetail";
 import Leaderboard from "./pages/Leaderboard";
 
 export default function App() {
@@ -80,6 +83,9 @@ export default function App() {
         <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
         <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+        <Route path="/lost-found" element={<ProtectedRoute><LostFound /></ProtectedRoute>} />
+        <Route path="/lost-found/new" element={<ProtectedRoute><CreateLostFound /></ProtectedRoute>} />
+        <Route path="/lost-found/:id" element={<ProtectedRoute><LostFoundDetail /></ProtectedRoute>} />
       </Routes>
     </>
   );

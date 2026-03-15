@@ -2,35 +2,41 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
+    title:       { type: String, required: true, trim: true },
     description: { type: String, required: true },
-    category: { type: String, required: true, index: true },
-    condition: { type: String, required: true, enum: ["new", "like_new", "good", "fair"] },
-    price: { type: Number, required: true, min: 0 },
-    university: { type: String, required: true, index: true },
-    images: [{ type: String, required: true }],
-    status: {
+    category: {
       type: String,
-      enum: ["available", "sold"],
-      default: "available",
+      required: true,
       index: true,
+      enum: [
+        "Electronics", "Books & Stationery", "Furniture",
+        "Vehicles & Cycles", "Clothing & Accessories", "Kitchen & Appliances",
+        "Sports & Fitness", "Musical Instruments", "Photography",
+        "Gaming", "Other"
+      ],
     },
-    seller: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-
+    listingType: {
+      type: String,
+      enum: ["sell", "free", "rent"],
+      default: "sell",
+    },
+    condition:   { type: String, required: true, enum: ["new", "like_new", "good", "fair"] },
+    price:       { type: Number, required: true, min: 0 },
+    university:  { type: String, required: true, index: true },
+    images:      [{ type: String, required: true }],
+    status:      { type: String, enum: ["available", "sold"], default: "available", index: true },
+    seller:      { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     // Analytics
-    views: { type: Number, default: 0 },
-    wishlistCount: { type: Number, default: 0 },
-
+    views:          { type: Number, default: 0 },
+    wishlistCount:  { type: Number, default: 0 },
     // Boost
-    boosted: { type: Boolean, default: false },
-    boostedUntil: { type: Date, default: null },
-
-    // Listing expiry (30 days from creation by default)
+    boosted:        { type: Boolean, default: false },
+    boostedUntil:   { type: Date, default: null },
+    // Expiry
     expiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-    archived: { type: Boolean, default: false },
-
+    archived:  { type: Boolean, default: false },
     // Rating cache
-    avgRating: { type: Number, default: 0 },
+    avgRating:   { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
   },
   { timestamps: true }

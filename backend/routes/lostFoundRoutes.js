@@ -1,0 +1,13 @@
+import express from "express";
+import { createPost, getPosts, getPostById, resolvePost, deletePost, getMyPosts } from "../controllers/lostFoundController.js";
+import { protect } from "../middleware/authMiddleware.js";
+import { uploadImages } from "../middleware/uploadMiddleware.js";
+const router = express.Router();
+router.use(protect);
+router.get("/my", getMyPosts);
+router.get("/", getPosts);
+router.post("/", uploadImages.array("images", 3), createPost);
+router.get("/:id", getPostById);
+router.patch("/:id/resolve", resolvePost);
+router.delete("/:id", deletePost);
+export default router;
