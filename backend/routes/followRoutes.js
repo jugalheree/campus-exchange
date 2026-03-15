@@ -1,0 +1,12 @@
+import express from "express";
+import { toggleFollow, checkFollow, getFollowCounts, getFollowFeed, getPublicProfile, getFollowList } from "../controllers/followController.js";
+import { protect } from "../middleware/authMiddleware.js";
+const router = express.Router();
+router.use(protect);
+router.get("/feed", getFollowFeed);
+router.get("/check/:userId", checkFollow);
+router.get("/counts/:userId", getFollowCounts);
+router.get("/profile/:userId", getPublicProfile);
+router.get("/list/:userId", getFollowList);
+router.post("/:userId", toggleFollow);
+export default router;

@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navbar-h: 56px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: #080808;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
+
+/* ── Design tokens ── */
+@layer utilities {
+  /* Page scaffold */
+  .page { min-height: 100vh; background: #080808; color: white; padding-top: 56px; }
+  .container-page { max-width: 80rem; margin: 0 auto; padding: 1.5rem 1rem 5rem; }
+  @media (min-width: 640px)  { .container-page { padding: 2rem 1.5rem 6rem; } }
+  @media (min-width: 1024px) { .container-page { padding: 2.5rem 2rem 6rem; } }
+
+  /* Cards */
+  .card { background: #111111; border: 1px solid rgba(255,255,255,0.07); border-radius: 1.25rem; }
+  .card-hover { transition: border-color 0.2s, background 0.2s; }
+  .card-hover:hover { border-color: rgba(255,255,255,0.14); background: #161616; }
+
+  /* Inputs */
+  .input-base {
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: white;
+    width: 100%;
+    transition: border-color 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    min-height: 44px; /* touch target */
+  }
+  .input-base:focus { outline: none; border-color: rgba(255,255,255,0.3); }
+  .input-base::placeholder { color: rgba(255,255,255,0.25); }
+
+  /* Buttons */
+  .btn-primary {
+    background: white; color: black; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    border-radius: 0.75rem; padding: 0.75rem 1.5rem;
+    transition: background 0.2s, transform 0.15s;
+    font-size: 0.9rem; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-primary:hover { background: #e8e8e8; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-ghost {
+    background: transparent; color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.75rem; padding: 0.75rem 1.5rem;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: white; background: rgba(255,255,255,0.05); }
+
+  .tag {
+    display: inline-flex; align-items: center;
+    padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.7rem;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+  }
+}
+
+/* ── Light mode ── */
+[data-theme="light"] body { background: #f8f8f8; color: #111; }
+[data-theme="light"] .card { background: #fff; border-color: rgba(0,0,0,0.08); }
+[data-theme="light"] nav { background: rgba(248,248,248,0.95) !important; border-color: rgba(0,0,0,0.08) !important; }
+[data-theme="light"] .input-base { background: #f0f0f0; border-color: rgba(0,0,0,0.12); color: #111; }
+[data-theme="light"] .btn-ghost { border-color: rgba(0,0,0,0.12); color: #555; }
+[data-theme="light"] .btn-ghost:hover { background: rgba(0,0,0,0.06); color: #111; }
+[data-theme="light"] .tag { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #555; }
+
+/* ── Animations ── */
+@keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+.animate-fade-up  { animation: fadeUp  0.5s ease forwards; }
+.animate-fade-in  { animation: fadeIn  0.4s ease forwards; }
+.delay-100 { animation-delay:.1s } .delay-200 { animation-delay:.2s }
+.delay-300 { animation-delay:.3s } .delay-400 { animation-delay:.4s }
+.delay-500 { animation-delay:.5s }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.2); }
+
+/* ── Touch targets ── */
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
