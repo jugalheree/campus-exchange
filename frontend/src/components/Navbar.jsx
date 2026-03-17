@@ -17,16 +17,13 @@ export default function Navbar() {
   const isActive = (path) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
-  // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
-  // Lock body scroll when sidebar open
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [sidebarOpen]);
 
-  // Poll counts
   useEffect(() => {
     if (!user) return;
     const poll = async () => {
@@ -53,9 +50,21 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── Navbar bar ── */}
-      <nav className="fixed top-0 left-0 w-full z-50 h-14 bg-[#080808]/95 backdrop-blur-2xl border-b border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-5 h-full flex items-center justify-between gap-4">
+      {/* ── Navbar ── */}
+      {/*
+        KEY FIX: padding-top uses env(safe-area-inset-top) so the navbar
+        content always starts BELOW the Dynamic Island / notch on any iPhone.
+        The nav height grows to fit — CSS var --navbar-h is updated to match.
+      */}
+      <nav
+        className="fixed top-0 left-0 w-full z-50 bg-[#080808]/95 backdrop-blur-2xl border-b border-white/[0.06]"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
+        <div className="h-14 max-w-7xl mx-auto px-5 flex items-center justify-between gap-4">
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
@@ -65,7 +74,7 @@ export default function Navbar() {
             <span className="text-white font-semibold text-sm hidden sm:block">Campus Exchange</span>
           </Link>
 
-          {/* Center nav — primary links only */}
+          {/* Center nav */}
           <div className="hidden md:flex items-center gap-0.5 flex-1 justify-center max-w-xs">
             <NavPill to="/products" active={isActive("/products")}>Marketplace</NavPill>
             {user && <NavPill to="/notes" active={isActive("/notes")}>Notes</NavPill>}
@@ -89,10 +98,7 @@ export default function Navbar() {
                   </svg>
                   List
                 </Link>
-
                 <NotificationBell />
-
-                {/* Avatar → opens sidebar */}
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 rounded-full hover:bg-white/5 transition relative"
@@ -118,8 +124,6 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-
-            {/* Mobile hamburger */}
             <button onClick={() => setSidebarOpen(v => !v)} className="md:hidden p-2 text-gray-400 hover:text-white transition ml-1">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -138,8 +142,18 @@ export default function Navbar() {
       )}
 
       {/* ── Sidebar panel ── */}
-      <aside className={`fixed top-0 right-0 h-full w-72 z-[70] bg-[#0d0d0d] border-l border-white/[0.07] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${sidebarOpen ? "translate-x-0" : "translate-x-full"}`}>
-
+      {/*
+        Sidebar also needs safe-area padding so its header clears the notch,
+        and its bottom clears the home indicator bar.
+      */}
+      <aside
+        className={`fixed top-0 right-0 h-full w-72 z-[70] bg-[#0d0d0d] border-l border-white/[0.07] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${sidebarOpen ? "translate-x-0" : "translate-x-full"}`}
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
           {user ? (
@@ -164,8 +178,6 @@ export default function Navbar() {
 
         {/* Nav links */}
         <div className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-
-          {/* Primary */}
           <SideItem to="/products" icon={<IconStore />} active={isActive("/products")}>Marketplace</SideItem>
           {user && <SideItem to="/notes" icon={<IconNote />} active={isActive("/notes")}>Notes</SideItem>}
 
@@ -258,7 +270,6 @@ function SideItem({ to, icon, active, badge, children }) {
   );
 }
 
-/* Icons — inline SVG, no library */
 const I = ({ d, ...p }) => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} {...p}>
     <path strokeLinecap="round" strokeLinejoin="round" d={d} />

@@ -28,12 +28,36 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 const app = express();
 
 /* ===============================
+   Allowed Origins
+================================= */
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  // Add your Vercel URL(s) here — or set ALLOWED_ORIGIN in Render env vars
+  process.env.ALLOWED_ORIGIN,
+].filter(Boolean); // removes undefined if env var not set
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked: ${origin}`);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+}));
+
+/* ===============================
    Core Middleware
 ================================= */
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 
 const __dirname = path.resolve();
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
