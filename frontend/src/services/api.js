@@ -1,19 +1,23 @@
 import axios from "axios";
 import { authStore } from "../store/authStore";
 
+// In development: http://localhost:5000/api
+// In production:  set VITE_API_URL=https://your-backend.onrender.com in your deploy env
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: BASE_URL,
   withCredentials: true,
 });
 
-// Attach access token
+// Attach access token to every request
 api.interceptors.request.use((config) => {
   const token = authStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Auto-refresh on 401
+// Auto-refresh token on 401
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -21,7 +25,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        const res = await axios.post("http://localhost:5000/api/auth/refresh", {}, { withCredentials: true });
+        const res = await axios.post(
+          `${BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
         authStore.getState().setAccessToken(res.data.accessToken);
         original.headers.Authorization = `Bearer ${res.data.accessToken}`;
         return api(original);
