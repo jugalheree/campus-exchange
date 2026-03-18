@@ -6,8 +6,6 @@ import { authStore } from "../store/authStore";
 import { useNavigate, Link } from "react-router-dom";
 import SearchSuggestions from "../components/SearchSuggestions";
 
-// removed CAT_ICONS = { Notes: "📝", Books: "📚", Calculators: "🧮", Electronics: "💻", "Lab Equipment": "🔬", Other: "📦" };
-
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,12 +13,12 @@ export default function Products() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-
   const [filters, setFilters] = useState({ q: "", category: "", condition: "", minPrice: "", maxPrice: "", sortBy: "newest" });
 
   const navigate = useNavigate();
-  const user = authStore((state) => state.user);
+  const user = authStore((s) => s.user);
 
+  // FIX: fetch products regardless of auth — let backend decide visibility
   const fetchProducts = async (p = 1) => {
     setLoading(true);
     try {
@@ -37,113 +35,132 @@ export default function Products() {
     }
   };
 
-  useEffect(() => { if (user) fetchProducts(page); else setLoading(false); }, [user, page]);
-
-  const handleSearch = (e) => { e.preventDefault(); setPage(1); fetchProducts(1); };
+  useEffect(() => { fetchProducts(page); }, [page]);
+  const handleSearch = (e) => { e?.preventDefault(); setPage(1); fetchProducts(1); };
   const setFilter = (key, val) => setFilters(f => ({ ...f, [key]: val }));
   const clearFilters = () => { setFilters({ q: "", category: "", condition: "", minPrice: "", maxPrice: "", sortBy: "newest" }); setPage(1); };
   const hasActiveFilters = filters.category || filters.condition || filters.minPrice || filters.maxPrice;
 
   return (
-    <div className="relative min-h-screen bg-[#080808] text-white overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-violet-600 opacity-[0.03] rounded-full blur-[120px] pointer-events-none" />
+    <div className="page">
+      <div className="container-page">
 
-      <div className={`relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-24 transition-all duration-500 ${!user ? "blur-md pointer-events-none select-none" : ""}`}>
-
-        {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Marketplace</h1>
-              <p className="text-gray-500 mt-2">Discover items from your campus community</p>
-            </div>
-            <Link to="/create-product" className="btn-primary px-6 py-3 rounded-xl text-sm">+ List Item</Link>
-          </div>
-
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
-            <div className="flex-1 relative">
+        {/* Search bar */}
+        <div className="mb-4">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="flex-1">
               <SearchSuggestions
                 value={filters.q}
                 onChange={(v) => setFilter("q", v)}
                 onSubmit={handleSearch}
-                placeholder="Search products..."
+                placeholder="Search listings..."
               />
             </div>
-            <select value={filters.sortBy} onChange={(e) => setFilter("sortBy", e.target.value)} className="input-base w-full sm:w-auto sm:min-w-40 cursor-pointer">
-              <option value="newest">Newest first</option>
-              <option value="price_asc">Price: Low → High</option>
-              <option value="price_desc">Price: High → Low</option>
-              <option value="popular">Most Wishlisted</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-            <button type="button" onClick={() => setShowFilters(v => !v)}
-              className={`btn-ghost px-4 py-3 rounded-xl text-sm flex items-center gap-2 ${hasActiveFilters ? "border-violet-500/50 text-violet-400" : ""}`}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-              Filters {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />}
+            <button
+              type="button"
+              onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center justify-center w-[52px] h-[52px] rounded-2xl border transition shrink-0 ${
+                hasActiveFilters
+                  ? "border-violet-500/50 text-violet-400 bg-violet-500/10"
+                  : "border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
             </button>
-            <button type="submit" className="btn-primary px-4 py-3 rounded-xl text-sm">Search</button>
           </form>
+        </div>
 
-          {/* Advanced Filters Panel */}
-          {showFilters && (
-            <div className="card p-6 mb-4 grid sm:grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="card p-4 mb-4 space-y-3 animate-fade-up">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Condition</label>
-                <select value={filters.condition} onChange={(e) => setFilter("condition", e.target.value)} className="input-base cursor-pointer">
-                  <option value="">Any condition</option>
+                <label className="section-label block mb-1.5">Sort by</label>
+                <select value={filters.sortBy} onChange={e => setFilter("sortBy", e.target.value)} className="input-base text-sm py-2.5 min-h-0 h-11">
+                  <option value="newest">Newest</option>
+                  <option value="price_asc">Price ↑</option>
+                  <option value="price_desc">Price ↓</option>
+                  <option value="popular">Popular</option>
+                  <option value="rating">Top rated</option>
+                </select>
+              </div>
+              <div>
+                <label className="section-label block mb-1.5">Condition</label>
+                <select value={filters.condition} onChange={e => setFilter("condition", e.target.value)} className="input-base text-sm py-2.5 min-h-0 h-11">
+                  <option value="">Any</option>
                   {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Min Price (₹)</label>
+                <label className="section-label block mb-1.5">Min price (₹)</label>
                 <input type="number" placeholder="0" value={filters.minPrice} min="0"
-                  onChange={(e) => setFilter("minPrice", e.target.value)} className="input-base" />
+                  onChange={e => setFilter("minPrice", e.target.value)} className="input-base text-sm py-2.5 min-h-0 h-11" />
               </div>
               <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">Max Price (₹)</label>
+                <label className="section-label block mb-1.5">Max price (₹)</label>
                 <input type="number" placeholder="Any" value={filters.maxPrice} min="0"
-                  onChange={(e) => setFilter("maxPrice", e.target.value)} className="input-base" />
-              </div>
-              <div className="flex items-end">
-                <button onClick={() => { clearFilters(); setShowFilters(false); fetchProducts(1); }}
-                  className="btn-ghost w-full py-3 rounded-xl text-sm text-red-400 border-red-500/20 hover:bg-red-500/10">
-                  Clear Filters
-                </button>
+                  onChange={e => setFilter("maxPrice", e.target.value)} className="input-base text-sm py-2.5 min-h-0 h-11" />
               </div>
             </div>
-          )}
-
-          {/* Category pills */}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => { setFilter("category", ""); setPage(1); }}
-              className={`px-4 py-2 rounded-xl text-sm transition-all ${!filters.category ? "bg-white text-black font-medium" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"}`}>
-              All
-            </button>
-            {MARKETPLACE_CATEGORIES.map((cat) => (
-              <button key={cat.label} onClick={() => { setFilter("category", cat.value); setPage(1); }}
-                className={`px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-1.5 ${filters.category === cat.value ? "bg-white text-black font-medium" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"}`}>
-                {cat.icon} {cat.label}
+            <div className="flex gap-2">
+              <button onClick={handleSearch} className="btn-primary flex-1 py-2.5 min-h-0 h-11 text-sm rounded-xl">
+                Apply
               </button>
-            ))}
+              {hasActiveFilters && (
+                <button onClick={() => { clearFilters(); setShowFilters(false); fetchProducts(1); }}
+                  className="btn-ghost flex-1 py-2.5 min-h-0 h-11 text-sm rounded-xl text-red-400 border-red-500/20">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
+        )}
+
+        {/* Category pills - horizontal scroll */}
+        <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none -mx-4 px-4">
+          <button
+            onClick={() => { setFilter("category", ""); setPage(1); fetchProducts(1); }}
+            className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap shrink-0 transition-all ${
+              !filters.category ? "bg-white text-black font-semibold" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            All
+          </button>
+          {MARKETPLACE_CATEGORIES.map((cat) => (
+            <button
+              key={cat.label}
+              onClick={() => { setFilter("category", cat.value); setPage(1); fetchProducts(1); }}
+              className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 ${
+                filters.category === cat.value ? "bg-white text-black font-semibold" : "border border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+              }`}
+            >
+              {cat.icon} {cat.label}
+            </button>
+          ))}
         </div>
 
-        {!loading && user && <p className="text-gray-600 text-sm mb-6">{total} listing{total !== 1 ? "s" : ""} found</p>}
+        {/* Results count */}
+        {!loading && (
+          <p className="text-gray-600 text-xs mb-3">{total} listing{total !== 1 ? "s" : ""} found</p>
+        )}
 
         {/* Grid */}
         {loading ? (
-          <div className="flex justify-center py-24">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-t-white border-r-2 border-r-transparent" />
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="skeleton aspect-[3/4] rounded-2xl" />
+            ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="card p-16 text-center">
-            <p className="text-5xl mb-4">🔍</p>
-            <p className="text-gray-400 text-lg">No products found.</p>
-            <p className="text-gray-600 text-sm mt-2">Try adjusting your search or filters.</p>
+          <div className="card p-12 text-center mt-4">
+            <p className="text-3xl mb-3">🔍</p>
+            <p className="text-gray-400 text-sm">No products found.</p>
+            <p className="text-gray-600 text-xs mt-1">Try adjusting filters.</p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
@@ -152,27 +169,34 @@ export default function Products() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-16">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-ghost px-5 py-2.5 text-sm disabled:opacity-30">← Prev</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button key={p} onClick={() => setPage(p)} className={`w-10 h-10 rounded-xl text-sm transition-all ${page === p ? "bg-white text-black font-bold" : "border border-white/10 text-gray-400 hover:border-white/20"}`}>{p}</button>
-            ))}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-ghost px-5 py-2.5 text-sm disabled:opacity-30">Next →</button>
+          <div className="flex justify-center items-center gap-2 mt-8">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="btn-ghost px-4 py-2.5 text-sm min-h-0 h-11 rounded-xl disabled:opacity-30">← Prev</button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
+              return (
+                <button key={p} onClick={() => setPage(p)}
+                  className={`w-11 h-11 rounded-xl text-sm transition-all ${page === p ? "bg-white text-black font-bold" : "border border-white/10 text-gray-400 hover:border-white/20"}`}>
+                  {p}
+                </button>
+              );
+            })}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="btn-ghost px-4 py-2.5 text-sm min-h-0 h-11 rounded-xl disabled:opacity-30">Next →</button>
+          </div>
+        )}
+
+        {/* Login prompt for guests (non-blocking) */}
+        {!user && products.length > 0 && (
+          <div className="card p-5 mt-6 flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Sign in to buy & sell</p>
+              <p className="text-gray-500 text-xs mt-0.5">Join your campus marketplace</p>
+            </div>
+            <Link to="/login" className="btn-primary px-4 py-2.5 text-sm min-h-0 h-11 rounded-xl shrink-0">Sign in</Link>
           </div>
         )}
       </div>
-
-      {!user && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <div className="card p-12 max-w-md w-full">
-            <div className="text-5xl mb-6">🏪</div>
-            <h2 className="text-3xl font-bold mb-4">Members Only</h2>
-            <p className="text-gray-400 mb-8 text-sm leading-relaxed">This marketplace is exclusive to verified campus students.</p>
-            <button onClick={() => navigate("/login")} className="btn-primary w-full py-3.5 rounded-xl">Sign in to continue</button>
-            <p className="mt-4 text-gray-600 text-xs">New? <Link to="/register" className="text-gray-400 hover:text-white">Create an account</Link></p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
