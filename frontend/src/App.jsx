@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "./services/api";
 import { authStore } from "./store/authStore";
+import axios from "axios";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -31,33 +32,51 @@ import CreateLostFound from "./pages/CreateLostFound";
 import LostFoundDetail from "./pages/LostFoundDetail";
 import Leaderboard from "./pages/Leaderboard";
 
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 export default function App() {
-  const setAccessToken = authStore((state) => state.setAccessToken);
-  const setUser = authStore((state) => state.setUser);
-  const setAuthReady = authStore((state) => state.setAuthReady);
-  const user = authStore((state) => state.user);
-  const [loading, setLoading] = useState(true);
+  const setAccessToken = authStore((s) => s.setAccessToken);
+  const setRefreshToken = authStore((s) => s.setRefreshToken);
+  const setUser = authStore((s) => s.setUser);
+  const setAuthReady = authStore((s) => s.setAuthReady);
+  const user = authStore((s) => s.user);
+  const storedRefresh = authStore((s) => s.refreshToken);
+  const [loading, setLoading] = useState(!user); // skip spinner if already have user
 
   useEffect(() => {
-    const refreshUser = async () => {
+    const restoreSession = async () => {
+      if (!storedRefresh) {
+        // No refresh token at all — not logged in
+        setAuthReady(true);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const res = await api.post("/auth/refresh");
+        // Use stored refresh token to get a fresh access token
+        const res = await axios.post(
+          `${BASE_URL}/auth/refresh`,
+          { refreshToken: storedRefresh },
+          { withCredentials: false }
+        );
         setAccessToken(res.data.accessToken);
+        if (res.data.refreshToken) setRefreshToken(res.data.refreshToken);
         setUser(res.data.user);
       } catch {
-        // Not logged in — that's fine, clear any stale state
+        // Refresh token expired or invalid — log out cleanly
         setUser(null);
         setAccessToken(null);
+        setRefreshToken(null);
       } finally {
-        setAuthReady(true);  // tell ProtectedRoute it's safe to decide now
+        setAuthReady(true);
         setLoading(false);
       }
     };
-    refreshUser();
+
+    restoreSession();
   }, []);
 
-  // Minimal splash — only shown on very first load before localStorage hydrates
-  if (loading && !user) return (
+  if (loading) return (
     <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center gap-4">
       <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
         <span className="text-black font-black text-xs">CE</span>
@@ -71,7 +90,6 @@ export default function App() {
       <Navbar />
       <PWAInstallPrompt />
       <Routes>
-        {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -81,7 +99,6 @@ export default function App() {
         <Route path="/notes/:id" element={<NoteDetails />} />
         <Route path="/seller/:userId" element={<SellerProfile />} />
 
-        {/* Protected */}
         <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
         <Route path="/edit-product/:id" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
         <Route path="/create-note" element={<ProtectedRoute><CreateNote /></ProtectedRoute>} />

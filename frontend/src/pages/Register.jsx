@@ -15,7 +15,7 @@ export default function Register() {
     setError(""); setLoading(true);
     try {
       const res = await api.post("/auth/register", form);
-      login(res.data.user, res.data.accessToken);
+      login(res.data.user, res.data.accessToken, res.data.refreshToken);
       navigate("/products");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
