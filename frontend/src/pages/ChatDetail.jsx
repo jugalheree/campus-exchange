@@ -6,13 +6,15 @@ import { authStore } from "../store/authStore";
 export default function ChatDetail() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const user = authStore((state) => state.user);
+  const user = authStore((s) => s.user);
 
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [deletingChat, setDeletingChat] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -60,7 +62,6 @@ export default function ChatDetail() {
     setMessageText("");
     setSending(true);
 
-    // Optimistic message
     const tempId = `temp-${Date.now()}`;
     setMessages(prev => [...prev, {
       _id: tempId, _temp: true,
@@ -82,10 +83,23 @@ export default function ChatDetail() {
     }
   };
 
-  const handleDelete = async (msgId) => {
+  const handleDeleteMessage = async (msgId) => {
     setMessages(prev => prev.filter(m => m._id !== msgId));
     try { await api.delete(`/messages/${msgId}`); }
     catch { fetchMessages(true); }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!window.confirm("Delete this entire conversation? This cannot be undone.")) return;
+    setDeletingChat(true);
+    try {
+      // Delete all messages in conversation
+      await Promise.all(messages.map(m => api.delete(`/messages/${m._id}`).catch(() => {})));
+      navigate("/messages");
+    } catch {
+      alert("Failed to delete conversation");
+      setDeletingChat(false);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -93,7 +107,6 @@ export default function ChatDetail() {
   };
 
   const formatTime = (date) => new Date(date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-
   const formatDateLabel = (date) => {
     const d = new Date(date);
     const today = new Date();
@@ -103,16 +116,13 @@ export default function ChatDetail() {
     return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
   };
 
-  // Group messages with date separators and consecutive-sender grouping
   const grouped = [];
-  let lastDate = null;
-  let lastSenderId = null;
+  let lastDate = null, lastSenderId = null;
   messages.forEach((msg, i) => {
     const dateLabel = formatDateLabel(msg.createdAt);
     if (dateLabel !== lastDate) {
       grouped.push({ type: "date", label: dateLabel });
-      lastDate = dateLabel;
-      lastSenderId = null;
+      lastDate = dateLabel; lastSenderId = null;
     }
     const senderId = msg.sender?._id || msg.sender?.id;
     const isSameAsPrev = senderId === lastSenderId;
@@ -126,6 +136,10 @@ export default function ChatDetail() {
 
   const myId = user?.id || user?._id;
 
+  // FIX: chat layout accounts for both top navbar AND bottom nav bar
+  const bottomNavH = "calc(60px + env(safe-area-inset-bottom))";
+  const topNavH = "calc(56px + env(safe-area-inset-top))";
+
   if (loading) return (
     <div className="min-h-screen bg-[#080808] text-white flex items-center justify-center">
       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-t-white border-r-2 border-r-transparent" />
@@ -133,10 +147,11 @@ export default function ChatDetail() {
   );
 
   return (
-    // pt-14 accounts for the fixed site navbar
-    <div className="flex flex-col bg-[#080808] text-white" style={{ height: "100vh", paddingTop: "56px" }}>
-
-      {/* ── Chat Header (sits right below site navbar) ── */}
+    <div
+      className="flex flex-col bg-[#080808] text-white"
+      style={{ height: "100vh", paddingTop: topNavH, paddingBottom: bottomNavH }}
+    >
+      {/* Chat header */}
       <div className="shrink-0 bg-[#0d0d0d] border-b border-white/[0.07] px-4 py-3 flex items-center gap-3">
         <button onClick={() => navigate("/messages")}
           className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition shrink-0">
@@ -148,10 +163,11 @@ export default function ChatDetail() {
         {otherUser ? (
           <Link to={`/seller/${otherUser._id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition">
             <div className="relative shrink-0">
-              <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-violet-500 via-indigo-500 to-purple-600">
-                <div className="w-full h-full rounded-full bg-[#0d0d0d] flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">{otherUser.name?.charAt(0)?.toUpperCase()}</span>
-                </div>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center overflow-hidden">
+                {otherUser.avatar
+                  ? <img src={otherUser.avatar} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-sm font-bold text-white">{otherUser.name?.charAt(0)?.toUpperCase()}</span>
+                }
               </div>
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-[#0d0d0d]" />
             </div>
@@ -164,28 +180,53 @@ export default function ChatDetail() {
           <div className="flex-1 h-8 bg-white/5 rounded-xl animate-pulse" />
         )}
 
-        {otherUser && (
-          <Link to={`/seller/${otherUser._id}`}
-            className="shrink-0 p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        {/* Kebab menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowMenu(v => !v)}
+            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
             </svg>
-          </Link>
-        )}
+          </button>
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-10 z-50 w-48 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl">
+                {otherUser && (
+                  <Link to={`/seller/${otherUser._id}`} onClick={() => setShowMenu(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 transition">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    View profile
+                  </Link>
+                )}
+                <button
+                  onClick={() => { setShowMenu(false); handleDeleteConversation(); }}
+                  disabled={deletingChat}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  Delete conversation
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* ── Messages Scroll Area ── */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
-        {/* Empty state */}
+      {/* Messages scroll area */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
         {messages.length === 0 && otherUser && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-10">
-            <div className="w-20 h-20 rounded-full p-[3px] bg-gradient-to-tr from-violet-500 via-indigo-500 to-purple-600">
-              <div className="w-full h-full rounded-full bg-[#080808] flex items-center justify-center">
-                <span className="text-3xl font-black text-white">{otherUser.name?.charAt(0)?.toUpperCase()}</span>
-              </div>
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center overflow-hidden">
+              {otherUser.avatar
+                ? <img src={otherUser.avatar} alt="" className="w-full h-full object-cover" />
+                : <span className="text-2xl font-black text-white">{otherUser.name?.charAt(0)?.toUpperCase()}</span>
+              }
             </div>
             <div>
-              <p className="font-bold text-lg">{otherUser.name}</p>
+              <p className="font-bold text-base">{otherUser.name}</p>
               <p className="text-gray-500 text-sm">🎓 {otherUser.university}</p>
             </div>
             <p className="text-gray-600 text-sm">Say hi to start the conversation 👋</p>
@@ -195,7 +236,7 @@ export default function ChatDetail() {
         <div className="max-w-lg mx-auto w-full space-y-0.5">
           {grouped.map((item, i) => {
             if (item.type === "date") return (
-              <div key={`date-${i}`} className="flex items-center gap-3 py-5">
+              <div key={`date-${i}`} className="flex items-center gap-3 py-4">
                 <div className="flex-1 h-px bg-white/[0.05]" />
                 <span className="text-gray-600 text-xs px-2">{item.label}</span>
                 <div className="flex-1 h-px bg-white/[0.05]" />
@@ -210,18 +251,20 @@ export default function ChatDetail() {
               <div key={msg._id}
                 className={`flex items-end gap-2 ${isOwn ? "justify-end" : "justify-start"} ${item.isSameAsPrev ? "mt-0.5" : "mt-3"}`}>
 
-                {/* Other user avatar */}
                 {!isOwn && (
                   <div className="w-7 h-7 shrink-0 mb-0.5">
                     {item.isLast ? (
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white">
-                        {otherUser?.name?.charAt(0)?.toUpperCase()}
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+                        {otherUser?.avatar
+                          ? <img src={otherUser.avatar} alt="" className="w-full h-full object-cover" />
+                          : otherUser?.name?.charAt(0)?.toUpperCase()
+                        }
                       </div>
-                    ) : null}
+                    ) : <div className="w-7 h-7" />}
                   </div>
                 )}
 
-                <div className={`group flex flex-col gap-0.5 max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
+                <div className={`group flex flex-col gap-0.5 max-w-[72%] ${isOwn ? "items-end" : "items-start"}`}>
                   <div className={`
                     px-3.5 py-2.5 text-sm leading-relaxed break-words
                     ${isOwn
@@ -241,8 +284,10 @@ export default function ChatDetail() {
                           <span className={`text-[10px] ${msg.isRead ? "text-indigo-400" : "text-gray-600"}`}>
                             {msg.isRead ? "✓✓" : "✓"}
                           </span>
-                          <button onClick={() => handleDelete(msg._id)}
-                            className="text-[10px] text-red-400 opacity-0 group-hover:opacity-100 transition">
+                          <button
+                            onClick={() => handleDeleteMessage(msg._id)}
+                            className="text-[10px] text-red-400 opacity-0 group-hover:opacity-100 transition"
+                          >
                             delete
                           </button>
                         </>
@@ -257,11 +302,14 @@ export default function ChatDetail() {
         </div>
       </div>
 
-      {/* ── Input Bar ── */}
-      <div className="shrink-0 bg-[#0d0d0d] border-t border-white/[0.07] px-3 py-3 pb-safe">
-        <form onSubmit={handleSend} className="max-w-xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            {user?.name?.charAt(0)?.toUpperCase()}
+      {/* Input bar — sits above bottom nav due to paddingBottom on parent */}
+      <div className="shrink-0 bg-[#0d0d0d] border-t border-white/[0.07] px-3 py-3">
+        <form onSubmit={handleSend} className="max-w-xl mx-auto flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden">
+            {user?.avatar
+              ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              : user?.name?.charAt(0)?.toUpperCase()
+            }
           </div>
 
           <div className="flex-1 flex items-center bg-[#1a1a1a] border border-white/[0.09] rounded-full px-4 gap-2">
@@ -269,7 +317,7 @@ export default function ChatDetail() {
               ref={inputRef}
               type="text"
               value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
+              onChange={e => setMessageText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={`Message ${otherUser?.name?.split(" ")[0] || ""}...`}
               maxLength={2000}
@@ -278,7 +326,7 @@ export default function ChatDetail() {
             />
             {messageText && (
               <button type="button" onClick={() => setMessageText("")}
-                className="text-gray-600 hover:text-gray-400 text-xs transition shrink-0">✕</button>
+                className="text-gray-600 hover:text-gray-400 text-xs shrink-0">✕</button>
             )}
           </div>
 
@@ -287,9 +335,10 @@ export default function ChatDetail() {
             disabled={sending || !messageText.trim() || !otherUser}
             className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition ${
               messageText.trim() && otherUser
-                ? "bg-white text-black hover:bg-gray-100"
+                ? "bg-white text-black hover:bg-gray-100 active:scale-95"
                 : "bg-white/10 text-gray-600 cursor-not-allowed"
-            }`}>
+            }`}
+          >
             {sending
               ? <div className="w-4 h-4 animate-spin rounded-full border-t-2 border-t-current border-r-2 border-r-transparent" />
               : <svg className="w-4 h-4 -rotate-45 translate-x-px" fill="currentColor" viewBox="0 0 24 24">
