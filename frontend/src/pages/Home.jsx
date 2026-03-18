@@ -4,22 +4,11 @@ import { authStore } from "../store/authStore";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 
-const FEATURES = [
-  { icon: "🎓", title: "University-only", desc: "Verified students only." },
-  { icon: "⚡", title: "List in 60s", desc: "Books, notes, gear — instantly." },
-  { icon: "💬", title: "Direct chat", desc: "No middlemen." },
-  { icon: "📚", title: "Study notes", desc: "Past papers, guides." },
-  { icon: "💰", title: "Make offers", desc: "Negotiate with one tap." },
-  { icon: "🔔", title: "Smart alerts", desc: "Price drops, messages." },
-];
-
 const QUICK_LINKS = [
-  { to: "/products", icon: "🛍️", label: "Marketplace" },
-  { to: "/notes", icon: "📄", label: "Notes" },
-  { to: "/lost-found", icon: "🔍", label: "Lost & Found" },
-  { to: "/feed", icon: "📢", label: "Campus Feed" },
-  { to: "/leaderboard", icon: "🏆", label: "Leaderboard" },
-  { to: "/dashboard", icon: "📊", label: "Dashboard" },
+  { icon: "🏷️", label: "Sell", to: "/create-product", color: "from-violet-500/20 to-violet-500/5" },
+  { icon: "📚", label: "Notes", to: "/notes", color: "from-indigo-500/20 to-indigo-500/5" },
+  { icon: "🔍", label: "Lost & Found", to: "/lost-found", color: "from-amber-500/20 to-amber-500/5" },
+  { icon: "🏆", label: "Top Sellers", to: "/leaderboard", color: "from-green-500/20 to-green-500/5" },
 ];
 
 export default function Home() {
@@ -27,136 +16,174 @@ export default function Home() {
   const [trending, setTrending] = useState([]);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(false);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     Promise.all([api.get("/products/trending"), api.get("/products/recent")])
-      .then(([t, r]) => {
-        setTrending(t.data.products || []);
-        setRecent(r.data.products || []);
-      })
+      .then(([t, r]) => { setTrending(t.data.products || []); setRecent(r.data.products || []); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
 
-  return (
+  /* ── Logged-in home ── */
+  if (user) return (
     <div className="page">
-      {/* ── Logged-out hero ── */}
-      {!user && (
-        <section className="relative flex flex-col items-center justify-center text-center px-6 py-16 min-h-[60vh]">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-violet-600 opacity-[0.06] rounded-full blur-[80px]" />
-          </div>
-          <div className="relative z-10 max-w-sm w-full">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.04] text-gray-400 text-xs mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Student-only · Verified access
-            </div>
-            <h1 className="text-4xl font-black leading-[0.95] tracking-tight mb-4">
-              Your campus.<br />
-              <span className="text-gray-500">One marketplace.</span>
-            </h1>
-            <p className="text-gray-400 text-sm leading-relaxed mb-8">
-              Buy, sell, and share within your university.
-            </p>
-            <div className="flex flex-col gap-3">
-              <Link to="/register" className="btn-primary w-full">Create free account →</Link>
-              <Link to="/login" className="btn-ghost w-full">Sign in</Link>
-            </div>
-          </div>
-        </section>
-      )}
+      <div className="container-page space-y-8">
 
-      {/* ── Logged-in greeting ── */}
-      {user && (
-        <div className="container-page">
-          {/* Greeting */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="section-label">Good to see you</p>
-              <h1 className="text-2xl font-bold mt-0.5">Hey, {user.name?.split(" ")[0]} 👋</h1>
-            </div>
-            <Link to="/create-product"
-              className="flex items-center gap-1.5 bg-white text-black text-sm font-semibold px-4 py-2.5 rounded-2xl hover:bg-gray-100 transition active:scale-95">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              List
+        {/* Greeting */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="section-label">{greeting}</p>
+            <h1 className="text-xl font-bold mt-0.5">{user.name?.split(" ")[0]} 👋</h1>
+          </div>
+          <Link to="/profile"
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white overflow-hidden hover:ring-2 hover:ring-white/20 transition">
+            {user.avatar
+              ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              : user.name?.charAt(0)?.toUpperCase()
+            }
+          </Link>
+        </div>
+
+        {/* Quick links */}
+        <div className="grid grid-cols-4 gap-2.5">
+          {QUICK_LINKS.map(l => (
+            <Link key={l.label} to={l.to}
+              className={`flex flex-col items-center gap-2 p-3 rounded-2xl bg-gradient-to-b ${l.color} border border-white/[0.07] hover:border-white/[0.14] transition active:scale-95`}>
+              <span className="text-2xl">{l.icon}</span>
+              <span className="text-[10px] font-medium text-gray-400 text-center leading-tight">{l.label}</span>
             </Link>
-          </div>
+          ))}
+        </div>
 
-          {/* Quick links grid */}
-          <div className="grid grid-cols-3 gap-2.5 mb-8">
-            {QUICK_LINKS.map(({ to, icon, label }) => (
-              <Link key={to} to={to}
-                className="card flex flex-col items-center justify-center gap-1.5 py-4 px-2 card-hover active:scale-95 transition-transform">
-                <span className="text-2xl">{icon}</span>
-                <span className="text-xs text-gray-400 font-medium text-center leading-tight">{label}</span>
-              </Link>
-            ))}
-          </div>
+        {/* Search bar */}
+        <Link to="/products"
+          className="flex items-center gap-3 w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-3.5 hover:border-white/[0.16] hover:bg-white/[0.07] transition">
+          <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span className="text-gray-500 text-sm">Search marketplace...</span>
+        </Link>
 
-          {/* Trending */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
+        {/* Trending */}
+        {loading ? (
+          <div>
+            <div className="skeleton h-5 w-32 mb-4 rounded-lg" />
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-52 rounded-2xl" />)}
+            </div>
+          </div>
+        ) : trending.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="section-label">This week</p>
-                <h2 className="text-base font-bold mt-0.5">Trending on campus</h2>
+                <p className="section-label">Trending</p>
+                <h2 className="text-base font-bold mt-0.5">🔥 Hot right now</h2>
               </div>
               <Link to="/products" className="text-xs text-gray-500 hover:text-white transition">See all →</Link>
             </div>
-            {loading ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-52 rounded-2xl" />)}
-              </div>
-            ) : trending.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {trending.slice(0, 4).map(p => <ProductCard key={p._id} product={p} />)}
-              </div>
-            ) : (
-              <div className="card p-6 text-center">
-                <p className="text-gray-500 text-sm">No trending items yet.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Recently listed */}
-          {recent.length > 0 && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="section-label">Fresh drops</p>
-                  <h2 className="text-base font-bold mt-0.5">Recently listed</h2>
-                </div>
-                <Link to="/products" className="text-xs text-gray-500 hover:text-white transition">See all →</Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {recent.slice(0, 4).map(p => <ProductCard key={p._id} product={p} />)}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Features (logged out) ── */}
-      {!user && (
-        <section className="px-5 pb-10 border-t border-white/[0.05] pt-10">
-          <div className="max-w-sm mx-auto">
-            <p className="section-label text-center mb-1">Built for students</p>
-            <h2 className="text-xl font-bold text-center mb-6">Everything you need</h2>
             <div className="grid grid-cols-2 gap-3">
-              {FEATURES.map(f => (
-                <div key={f.title} className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4">
-                  <span className="text-xl block mb-2">{f.icon}</span>
-                  <h3 className="text-xs font-semibold mb-0.5">{f.title}</h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
-                </div>
-              ))}
+              {trending.slice(0, 4).map(p => <ProductCard key={p._id} product={p} />)}
             </div>
           </div>
-        </section>
-      )}
+        )}
+
+        {/* Recent */}
+        {!loading && recent.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="section-label">Just listed</p>
+                <h2 className="text-base font-bold mt-0.5">🆕 New arrivals</h2>
+              </div>
+              <Link to="/products" className="text-xs text-gray-500 hover:text-white transition">See all →</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {recent.slice(0, 4).map(p => <ProductCard key={p._id} product={p} />)}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+
+  /* ── Landing (not logged in) ── */
+  return (
+    <div className="bg-[#080808] text-white overflow-x-hidden">
+
+      {/* Hero */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center text-center px-5 pt-16">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-violet-600 opacity-[0.06] rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-indigo-500 opacity-[0.04] rounded-full blur-[80px]" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/[0.04] text-gray-400 text-xs mb-8 animate-fade-in">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Student-only · Verified university access
+          </div>
+
+          <h1 className="text-5xl sm:text-6xl font-black leading-[0.92] tracking-tight mb-5 animate-fade-up">
+            Your campus.<br />
+            <span className="text-gray-500">One marketplace.</span>
+          </h1>
+
+          <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-10 max-w-sm mx-auto animate-fade-up" style={{ animationDelay: "0.1s" }}>
+            Buy, sell, and share within your university. Books, notes, gear — from students who get it.
+          </p>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-3 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+            <Link to="/register" className="btn-primary px-8 py-4 rounded-2xl text-base">
+              Get started free →
+            </Link>
+            <Link to="/products" className="btn-ghost px-8 py-4 rounded-2xl text-base">
+              Browse listings
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-20 px-5 border-t border-white/[0.05]">
+        <div className="max-w-4xl mx-auto">
+          <p className="section-label text-center mb-3">Built for students</p>
+          <h2 className="text-3xl font-bold text-center mb-12">Everything you need</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { icon: "🎓", title: "University-only", desc: "Verified students only. No outsiders." },
+              { icon: "⚡", title: "List in 60s", desc: "Books, notes, gear — up instantly." },
+              { icon: "💬", title: "Direct chat", desc: "Negotiate directly, no middlemen." },
+              { icon: "📚", title: "Study notes", desc: "Semester notes, past papers, guides." },
+              { icon: "💰", title: "Make offers", desc: "Negotiate any price with one tap." },
+              { icon: "🔍", title: "Lost & Found", desc: "Campus-wide lost & found board." },
+            ].map(f => (
+              <div key={f.title} className="card p-5 hover:border-white/14 transition">
+                <span className="text-2xl block mb-3">{f.icon}</span>
+                <p className="font-semibold text-sm mb-1">{f.title}</p>
+                <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-5 text-center border-t border-white/[0.05]">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-3xl font-bold mb-4">Ready to start?</h2>
+          <p className="text-gray-500 mb-8">Join your campus marketplace. It's free, always.</p>
+          <div className="flex justify-center gap-3">
+            <Link to="/register" className="btn-primary px-8 py-4 rounded-2xl">Sign up free →</Link>
+            <Link to="/login" className="btn-ghost px-8 py-4 rounded-2xl">Login</Link>
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }
