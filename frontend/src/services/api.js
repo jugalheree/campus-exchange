@@ -1,13 +1,12 @@
 import axios from "axios";
 import { authStore } from "../store/authStore";
 
-// In development: http://localhost:5000/api
-// In production:  set VITE_API_URL=https://your-backend.onrender.com in your deploy env
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
+  timeout: 30000, // 30s timeout handles Render cold start wake-up
 });
 
 // Attach access token to every request
@@ -17,11 +16,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto-refresh token on 401
+// Auto-refresh token on 401, then retry the original request
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
+
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
@@ -34,11 +34,21 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${res.data.accessToken}`;
         return api(original);
       } catch {
+        // Refresh failed — clear auth and let the user log in again
         authStore.getState().logout();
       }
     }
+
     return Promise.reject(error);
   }
 );
 
 export default api;
+
+// ── Render cold-start wake-up ──────────────────────────────────────────────
+// Render free tier sleeps after 15 min of inactivity. The first request takes
+// ~30 seconds. This ping fires immediately when the JS loads, so the backend
+// is warm by the time the user clicks anything.
+if (import.meta.env.VITE_API_URL) {
+  axios.get(`${BASE_URL.replace("/api", "")}/`).catch(() => {});
+}

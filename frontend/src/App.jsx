@@ -34,6 +34,8 @@ import Leaderboard from "./pages/Leaderboard";
 export default function App() {
   const setAccessToken = authStore((state) => state.setAccessToken);
   const setUser = authStore((state) => state.setUser);
+  const setAuthReady = authStore((state) => state.setAuthReady);
+  const user = authStore((state) => state.user);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,15 +44,25 @@ export default function App() {
         const res = await api.post("/auth/refresh");
         setAccessToken(res.data.accessToken);
         setUser(res.data.user);
-      } catch { /* not logged in */ }
-      finally { setLoading(false); }
+      } catch {
+        // Not logged in — that's fine, clear any stale state
+        setUser(null);
+        setAccessToken(null);
+      } finally {
+        setAuthReady(true);  // tell ProtectedRoute it's safe to decide now
+        setLoading(false);
+      }
     };
     refreshUser();
-  }, [setAccessToken, setUser]);
+  }, []);
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-t-white border-r-2 border-r-transparent" />
+  // Minimal splash — only shown on very first load before localStorage hydrates
+  if (loading && !user) return (
+    <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center gap-4">
+      <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
+        <span className="text-black font-black text-xs">CE</span>
+      </div>
+      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-t-white border-r-2 border-r-transparent" />
     </div>
   );
 
