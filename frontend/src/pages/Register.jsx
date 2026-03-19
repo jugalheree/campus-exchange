@@ -93,10 +93,15 @@ export default function Register() {
   const { login } = authStore();
   const navigate = useNavigate();
 
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
   useEffect(() => {
+    if (isSafari) return; // Safari uses redirect, no script needed
+
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
-    script.async = true; script.defer = true;
+    script.async = true;
+    script.defer = true;
     document.head.appendChild(script);
     script.onload = () => {
       if (window.google) {
@@ -128,8 +133,17 @@ export default function Register() {
   };
 
   const handleGoogleClick = () => {
-    if (window.google) window.google.accounts.id.prompt();
-    else setError("Google sign-in not loaded. Please refresh.");
+    if (isSafari) {
+      // Safari: use full page redirect
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const redirectUri = encodeURIComponent(window.location.origin + "/login");
+      const scope = encodeURIComponent("email profile openid");
+      const state = encodeURIComponent("register");
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}&prompt=select_account`;
+    } else {
+      if (window.google) window.google.accounts.id.prompt();
+      else setError("Google sign-in not loaded. Please refresh.");
+    }
   };
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
