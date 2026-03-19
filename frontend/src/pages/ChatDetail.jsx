@@ -204,7 +204,7 @@ export default function ChatDetail() {
   );
 
   return (
-    <div className="flex flex-col bg-[#080808] text-white" style={{ height: "100vh", paddingTop: "56px" }}>
+    <div className="flex flex-col bg-[#080808] text-white" style={{ height: "100vh", paddingTop: "var(--navbar-h)" }}>
 
       {/* Header */}
       <div className="shrink-0 bg-[#0d0d0d] border-b border-white/[0.07] px-4 py-3 flex items-center gap-3">
