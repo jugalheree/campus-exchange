@@ -2,9 +2,6 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { OAuth2Client } from "google-auth-library";
-import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
-import streamifier from "streamifier";
 
 import {
   registerUser,
@@ -18,7 +15,6 @@ import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const upload = multer({ storage: multer.memoryStorage() });
 
 /* ── Register ── */
 router.post("/register", registerUser);
@@ -45,28 +41,26 @@ router.post("/google", async (req, res) => {
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    const { sub: googleId, email, name, picture } = ticket.getPayload();
 
-    // Check if user already exists
+    // Find existing user by googleId or email
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
     if (user) {
-      // Existing user — update googleId and avatar if needed
-      if (!user.googleId) user.googleId = googleId;
-      if (!user.avatar && picture) user.avatar = picture;
-      await user.save();
+      // Update googleId if missing
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
     } else {
-      // New user — need university
+      // New user — need university name
       if (!university) {
         return res.status(200).json({
           success: false,
           needsUniversity: true,
           googleData: { googleId, email, name, picture },
-          message: "Please provide your university name",
         });
       }
-
       // Create new user
       user = await User.create({
         name,
@@ -74,11 +68,10 @@ router.post("/google", async (req, res) => {
         googleId,
         avatar: picture || "",
         university,
-        verified: true, // Google users are pre-verified
+        verified: true,
       });
     }
 
-    // Generate tokens
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
@@ -98,8 +91,8 @@ router.post("/google", async (req, res) => {
         verified: user.verified,
       },
     });
-  } catch (error) {
-    console.error("Google auth error:", error);
+  } catch (err) {
+    console.error("Google auth error:", err);
     return res.status(401).json({ success: false, message: "Google authentication failed" });
   }
 });
@@ -115,7 +108,7 @@ router.post("/refresh", async (req, res) => {
     const token = req.body.refreshToken || req.cookies?.refreshToken;
 
     if (!token) {
-      return res.status(401).json({ success: false, message: "No refresh token" });
+      return res.status(401).json({ success: false, message: "No refresh token provided" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
@@ -141,11 +134,10 @@ router.post("/refresh", async (req, res) => {
         avatar: user.avatar || "",
         bio: user.bio || "",
         upiId: user.upiId || "",
-        verified: user.verified,
       },
     });
   } catch (error) {
-    return res.status(401).json({ success: false, message: "Invalid refresh token" });
+    return res.status(401).json({ success: false, message: "Invalid or expired refresh token" });
   }
 });
 
@@ -158,41 +150,6 @@ router.post("/logout", (req, res) => {
     secure: false,
   });
   res.status(200).json({ success: true });
-});
-
-/* ── Upload avatar ── */
-router.post("/avatar", protect, upload.single("avatar"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
-
-    const streamUpload = () =>
-      new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "campus-exchange/avatars", width: 400, height: 400, crop: "fill" },
-          (err, result) => { if (result) resolve(result); else reject(err); }
-        );
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-      });
-
-    const result = await streamUpload();
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar: result.secure_url },
-      { new: true }
-    ).select("-password");
-
-    return res.json({
-      success: true,
-      user: {
-        id: user._id, name: user.name, email: user.email,
-        university: user.university, role: user.role,
-        avatar: user.avatar, bio: user.bio || "", upiId: user.upiId || "",
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Avatar upload failed" });
-  }
 });
 
 export default router;
