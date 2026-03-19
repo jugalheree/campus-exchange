@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { authStore } from "../store/authStore";
 
@@ -26,7 +26,7 @@ function GoogleButton({ onClick, loading }) {
   );
 }
 
-function UniversityPicker({ googleData, onClose }) {
+function UniversityPicker({ googleData, onCancel }) {
   const [university, setUniversity] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,23 +38,16 @@ function UniversityPicker({ googleData, onClose }) {
     if (!university.trim()) { setError("Please enter your university name"); return; }
     setLoading(true);
     try {
-      const res = await api.post("/auth/google", {
-        credential: googleData.credential,
-        university: university.trim(),
-      });
-      if (res.data.success) {
-        login(res.data.user, res.data.accessToken, res.data.refreshToken);
-        navigate("/");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
-    } finally { setLoading(false); }
+      const res = await api.post("/auth/google", { credential: googleData.credential, university: university.trim() });
+      if (res.data.success) { login(res.data.user, res.data.accessToken, res.data.refreshToken); navigate("/"); }
+    } catch (err) { setError(err.response?.data?.message || "Something went wrong"); }
+    finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4"
       style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}>
-      <div className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 animate-slide-up"
+      <div className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6"
         style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }}>
         <div className="flex flex-col items-center mb-6">
           {googleData.picture && <img src={googleData.picture} alt="" className="w-16 h-16 rounded-full mb-3" />}
@@ -63,21 +56,11 @@ function UniversityPicker({ googleData, onClose }) {
         </div>
         <p className="font-semibold text-sm mb-1">One last thing 👋</p>
         <p className="text-xs text-gray-500 mb-4">Which university are you from?</p>
-        {error && (
-          <div className="mb-3 px-3 py-2 rounded-xl text-xs text-red-400"
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="mb-3 px-3 py-2 rounded-xl text-xs text-red-400" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input type="text" placeholder="e.g. Parul University, GTU..."
-            value={university} onChange={e => setUniversity(e.target.value)}
-            className="input-base" autoFocus />
-          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60">
-            {loading ? "Joining..." : "Join Campus Exchange →"}
-          </button>
-          <button type="button" onClick={onClose}
-            className="w-full py-2 text-sm text-gray-500 hover:text-white transition">Cancel</button>
+          <input type="text" placeholder="e.g. Parul University, GTU..." value={university} onChange={e => setUniversity(e.target.value)} className="input-base" autoFocus />
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60">{loading ? "Joining..." : "Join Campus Exchange →"}</button>
+          <button type="button" onClick={onCancel} className="w-full py-2 text-sm text-gray-500 hover:text-white transition">Cancel</button>
         </form>
       </div>
     </div>
@@ -92,45 +75,18 @@ export default function Login() {
   const [googleData, setGoogleData] = useState(null);
   const { login } = authStore();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-  // Handle redirect callback from Google (Safari flow)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const code = params.get("code");
-    if (code) {
-      setGoogleLoading(true);
-      // Exchange code via backend
-      api.post("/auth/google-code", { code, redirectUri: window.location.origin + "/login" })
-        .then(res => {
-          if (res.data.needsUniversity) {
-            setGoogleData({ ...res.data.googleData, credential: res.data.googleData.idToken });
-          } else if (res.data.success) {
-            login(res.data.user, res.data.accessToken, res.data.refreshToken);
-            navigate("/");
-          }
-        })
-        .catch(() => setError("Google sign-in failed. Please try again."))
-        .finally(() => setGoogleLoading(false));
-    }
-  }, []);
 
   useEffect(() => {
     if (isSafari) return;
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
+    script.async = true; script.defer = true;
     document.head.appendChild(script);
     script.onload = () => {
       if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleGoogleCallback,
-          auto_select: false,
-        });
+        window.google.accounts.id.initialize({ client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID, callback: handleGoogleCallback, auto_select: false });
       }
     };
     return () => { if (document.head.contains(script)) document.head.removeChild(script); };
@@ -140,30 +96,16 @@ export default function Login() {
     setGoogleLoading(true); setError("");
     try {
       const res = await api.post("/auth/google", { credential: response.credential });
-      if (res.data.needsUniversity) {
-        setGoogleData({ ...res.data.googleData, credential: response.credential });
-        setGoogleLoading(false);
-        return;
-      }
-      if (res.data.success) {
-        login(res.data.user, res.data.accessToken, res.data.refreshToken);
-        navigate("/");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Google sign-in failed");
-    } finally { setGoogleLoading(false); }
+      if (res.data.needsUniversity) { setGoogleData({ ...res.data.googleData, credential: response.credential }); setGoogleLoading(false); return; }
+      if (res.data.success) { login(res.data.user, res.data.accessToken, res.data.refreshToken); navigate("/"); }
+    } catch (err) { setError(err.response?.data?.message || "Google sign-in failed"); }
+    finally { setGoogleLoading(false); }
   };
 
   const handleGoogleClick = () => {
-    if (isSafari) {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      const redirectUri = encodeURIComponent(window.location.origin + "/login");
-      const scope = encodeURIComponent("email profile openid");
-      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&prompt=select_account`;
-    } else {
-      if (window.google) window.google.accounts.id.prompt();
-      else setError("Google sign-in not loaded. Please refresh.");
-    }
+    if (isSafari) { setError("Google sign-in doesn't work on Safari. Please use email & password, or open this page in Chrome."); return; }
+    if (window.google) window.google.accounts.id.prompt();
+    else setError("Google sign-in not loaded. Please refresh.");
   };
 
   const handleSubmit = async (e) => {
@@ -172,17 +114,13 @@ export default function Login() {
       const res = await api.post("/auth/login", form);
       login(res.data.user, res.data.accessToken, res.data.refreshToken);
       navigate("/");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Check your credentials.");
-    } finally { setLoading(false); }
+    } catch (err) { setError(err.response?.data?.message || "Login failed. Check your credentials."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10"
-      style={{ background: "#000", color: "#fff" }}>
-
-      {googleData && <UniversityPicker googleData={googleData} onClose={() => setGoogleData(null)} />}
-
+    <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10" style={{ background: "#000", color: "#fff" }}>
+      {googleData && <UniversityPicker googleData={googleData} onCancel={() => setGoogleData(null)} />}
       <div className="flex flex-col items-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center mb-4">
           <span className="text-black font-black text-xl tracking-tight">CE</span>
@@ -190,41 +128,24 @@ export default function Login() {
         <h1 className="font-black text-2xl tracking-tight">Campus Exchange</h1>
         <p className="text-sm mt-1" style={{ color: "#606060" }}>The student marketplace</p>
       </div>
-
       <div className="w-full max-w-sm">
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm text-red-400"
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
-            {error}
-          </div>
-        )}
-
+        {error && <div className="mb-4 px-4 py-3 rounded-xl text-sm text-red-400" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>{error}</div>}
         <GoogleButton onClick={handleGoogleClick} loading={googleLoading} />
-
+        {isSafari && <p className="text-xs text-center mt-2" style={{ color: "#606060" }}>⚠️ Safari users — please use email & password or open in Chrome</p>}
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.1)" }} />
           <span className="text-xs font-medium" style={{ color: "#404040" }}>or</span>
           <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.1)" }} />
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input type="email" placeholder="Email" value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            className="input-base" required autoComplete="email" />
-          <input type="password" placeholder="Password" value={form.password}
-            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-            className="input-base" required autoComplete="current-password" />
-          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60"
-            style={{ background: "#1a1a1a", color: "white", border: "1.5px solid rgba(255,255,255,0.15)" }}>
+          <input type="email" placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="input-base" required autoComplete="email" />
+          <input type="password" placeholder="Password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="input-base" required autoComplete="current-password" />
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60" style={{ background: "#1a1a1a", color: "white", border: "1.5px solid rgba(255,255,255,0.15)" }}>
             {loading ? "Signing in..." : "Sign In with Email"}
           </button>
         </form>
-
         <div className="mt-6 text-center">
-          <p className="text-sm" style={{ color: "#606060" }}>
-            Don't have an account?{" "}
-            <Link to="/register" className="text-white font-semibold hover:opacity-80 transition">Sign up</Link>
-          </p>
+          <p className="text-sm" style={{ color: "#606060" }}>Don't have an account?{" "}<Link to="/register" className="text-white font-semibold hover:opacity-80 transition">Sign up</Link></p>
         </div>
       </div>
     </div>
